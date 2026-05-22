@@ -141,7 +141,7 @@ class _HomePageState extends State<HomePage>
                 const CircleAvatar(
                   radius: 50,
                   backgroundImage: NetworkImage(
-                    'https://i.pravatar.cc/300',
+                    'https://images.unsplash.com/photo-1511367461989-f85a21fda167',
                   ),
                 ),
 
