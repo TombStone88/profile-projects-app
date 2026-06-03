@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,22 +35,71 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  List<String> projects = [
-    "AI Assistant App",
-    "Portfolio Website",
-    "Weather App",
-  ];
+  List<String> projects = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+
+    _tabController = TabController(
+      length: 2,
+      vsync: this,
+    );
+
+    loadProjects();
+  }
+
+  Future<void> saveProjects() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('projects', projects);
+  }
+
+  Future<void> loadProjects() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final savedProjects = prefs.getStringList('projects');
+
+    if (savedProjects != null) {
+      setState(() {
+        projects = savedProjects;
+      });
+    } else {
+      projects = [
+        "AI Assistant App",
+        "Portfolio Website",
+        "Weather App",
+      ];
+
+      saveProjects();
+    }
+  }
+
+  void deleteProject(int index) {
+    setState(() {
+      projects.removeAt(index);
+    });
+
+    saveProjects();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Project Deleted"),
+      ),
+    );
   }
 
   void addProject(String projectName) {
     setState(() {
       projects.add(projectName);
     });
+
+    saveProjects();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Project Added Successfully"),
+      ),
+    );
   }
 
   void showAddDialog() {
@@ -169,9 +219,10 @@ class _HomePageState extends State<HomePage>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    buildStatCard("12", "Projects"),
-                    buildStatCard("5", "Skills"),
-                    buildStatCard("2", "Years"),
+                    buildStatCard(
+                      projects.length.toString(),
+                      "Projects",
+                    ),
                   ],
                 )
               ],
@@ -232,59 +283,85 @@ class _HomePageState extends State<HomePage>
       ),
     );
   }
-
   Widget buildProjectsTab() {
+    if (projects.isEmpty) {
+      return const Center(
+        child: Text(
+          "No Projects Yet",
+          style: TextStyle(
+            fontSize: 22,
+            color: Colors.white70,
+          ),
+        ),
+      );
+    }
+
     return ListView.builder(
       padding: const EdgeInsets.all(15),
       itemCount: projects.length,
       itemBuilder: (context, index) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 15),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(25),
+        return Dismissible(
+          key: Key(projects[index] + index.toString()),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) {
+            deleteProject(index);
+          },
+          background: Container(
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: const Icon(
+              Icons.delete,
+              color: Colors.white,
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: Colors.blueAccent.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(15),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 15),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(25),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.blueAccent.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: const Icon(
+                    Icons.code,
+                    color: Colors.blueAccent,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.code,
-                  color: Colors.blueAccent,
-                ),
-              ),
-
-              const SizedBox(width: 20),
-
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      projects[index],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        projects[index],
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    const Text(
-                      "Modern Flutter project with beautiful UI.",
-                      style: TextStyle(
-                        color: Colors.white70,
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Modern Flutter project with beautiful UI.",
+                        style: TextStyle(
+                          color: Colors.white70,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              )
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -297,26 +374,23 @@ class _HomePageState extends State<HomePage>
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-
         title: const Text(
           "Profile Dashboard",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
-
         centerTitle: true,
-
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.blueAccent,
+          indicatorWeight: 3,
+          labelColor: Colors.blueAccent,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(icon: Icon(Icons.person)),
-            Tab(icon: Icon(Icons.work)),
+            Tab(icon: Icon(Icons.person_outline), text: "Profile"),
+            Tab(icon: Icon(Icons.grid_view_rounded), text: "Projects"),
           ],
         ),
       ),
-
       body: TabBarView(
         controller: _tabController,
         children: [
@@ -324,13 +398,17 @@ class _HomePageState extends State<HomePage>
           buildProjectsTab(),
         ],
       ),
-
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: showAddDialog,
         backgroundColor: Colors.blueAccent,
-        icon: const Icon(Icons.add),
-        label: const Text("Project"),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 }
